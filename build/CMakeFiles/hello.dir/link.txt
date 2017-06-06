@@ -1,1 +1,0 @@
-/usr/bin/c++    -W -Wall -g   CMakeFiles/hello.dir/hello/hello.cpp.o  -o bin/hello -rdynamic /opt/amdgpu-pro/lib/x86_64-linux-gnu/libOpenCL.so -Wl,-rpath,/opt/amdgpu-pro/lib/x86_64-linux-gnu 
