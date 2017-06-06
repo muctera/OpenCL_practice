@@ -17,7 +17,7 @@ std::vector<cl::Device> get_Device_List(const cl_device_type type)
     return device_list;
 }
      
-int main(int argc, char *argv[])
+int main()
 {
 
     cl::Device gpu = get_Device_List(CL_DEVICE_TYPE_GPU)[0];
