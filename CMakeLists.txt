@@ -14,5 +14,5 @@ find_package(OpenCL 1.2 REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIRS})
 
 project(hello)
-add_executable(hello hello/hello.c)
+add_executable(hello hello/hello.cpp)
 target_link_libraries(hello ${OpenCL_LIBRARIES})
