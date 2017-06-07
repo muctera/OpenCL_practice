@@ -26,5 +26,9 @@ int main()
     std::cout << static_cast<std::string>(platform.getInfo<CL_PLATFORM_NAME>()) << std::endl;
     std::cout << static_cast<std::string>(gpu.getInfo<CL_DEVICE_NAME>()) << std::endl;
 
+#ifdef _WIN32
+	system("pause");
+#endif
+
     return 0;
 }
