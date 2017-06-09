@@ -3,7 +3,7 @@
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 #include <CL/cl.hpp>
 
-cl::Program fetch_Program(int &argc, char ** &argv)
+std::string fetch_Program(int &argc, char ** &argv)
 {
 	argc--;
 	argv++;
@@ -20,7 +20,7 @@ cl::Program fetch_Program(int &argc, char ** &argv)
 
 	std::cout << filestring;
 
-	return cl::Program(filestring);
+	return filestring;
 }
      
 int main(int argc, char *argv[])
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     std::cout << static_cast<std::string>(platform.getInfo<CL_PLATFORM_NAME>()) << std::endl;
     std::cout << static_cast<std::string>(gpu_list[0].getInfo<CL_DEVICE_NAME>()) << std::endl;
 
-	cl::Program program = fetch_Program(argc, argv);
+	cl::Program program(context, fetch_Program(argc, argv), true);
 #ifdef _WIN32
 	system("pause");
 #endif
