@@ -11,11 +11,16 @@ std::vector<cl::Device> get_Device_List(const cl_device_type type)
     for (auto &platform : platforms) {
         std::vector<cl::Device> devices;
         platform.getDevices(type, &devices);
-        for (auto &device : devices) {
-            device_list.push_back(device);
-        }
+		if (devices.size() != 0) {
+			return devices;
+		}
     }
-    return device_list;
+	throw;
+}
+
+cl::Context get_Context(const cl_device_type type)
+{
+	return cl::Context(get_Device_List(type));
 }
 
 cl::Program fetch_Program(int &argc, char ** &argv)
@@ -40,11 +45,12 @@ cl::Program fetch_Program(int &argc, char ** &argv)
      
 int main(int argc, char *argv[])
 {
-    cl::Device gpu = get_Device_List(CL_DEVICE_TYPE_GPU)[0];
-    cl::Platform platform = gpu.getInfo<CL_DEVICE_PLATFORM>();
+	cl::Context context = get_Context(CL_DEVICE_TYPE_GPU);
+    std::vector<cl::Device> gpu_list = context.getInfo<CL_CONTEXT_DEVICES>();
+    cl::Platform platform = gpu_list[0].getInfo<CL_DEVICE_PLATFORM>();
 
     std::cout << static_cast<std::string>(platform.getInfo<CL_PLATFORM_NAME>()) << std::endl;
-    std::cout << static_cast<std::string>(gpu.getInfo<CL_DEVICE_NAME>()) << std::endl;
+    std::cout << static_cast<std::string>(gpu_list[0].getInfo<CL_DEVICE_NAME>()) << std::endl;
 
 	cl::Program program = fetch_Program(argc, argv);
 #ifdef _WIN32
