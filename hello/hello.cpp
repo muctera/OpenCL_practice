@@ -33,6 +33,18 @@ int main(int argc, char *argv[])
     std::cout << static_cast<std::string>(gpu_list[0].getInfo<CL_DEVICE_NAME>()) << std::endl;
 
 	cl::Program program(context, fetch_Program(argc, argv), true);
+	cl::CommandQueue queue(context, gpu_list[0]);
+
+	char string[20] = { 0 };
+	cl::Buffer buffer(context, CL_MEM_WRITE_ONLY, sizeof(string));
+
+	cl::Kernel kernel(program, "hello");
+	kernel.setArg(0, buffer);
+
+	queue.enqueueTask(kernel);
+	queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(string), string);
+
+	puts(string);
 #ifdef _WIN32
 	system("pause");
 #endif
