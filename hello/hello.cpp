@@ -18,8 +18,6 @@ std::string fetch_Program(int &argc, char ** &argv)
 		std::istreambuf_iterator<char>()
 	);
 
-	std::cout << filestring;
-
 	return filestring;
 }
      
@@ -27,10 +25,6 @@ int main(int argc, char *argv[])
 {
 	cl::Context context(CL_DEVICE_TYPE_GPU);
     std::vector<cl::Device> gpu_list = context.getInfo<CL_CONTEXT_DEVICES>();
-    cl::Platform platform = gpu_list[0].getInfo<CL_DEVICE_PLATFORM>();
-
-    std::cout << static_cast<std::string>(platform.getInfo<CL_PLATFORM_NAME>()) << std::endl;
-    std::cout << static_cast<std::string>(gpu_list[0].getInfo<CL_DEVICE_NAME>()) << std::endl;
 
 	cl::Program program(context, fetch_Program(argc, argv), true);
 	cl::CommandQueue queue(context, gpu_list[0]);
