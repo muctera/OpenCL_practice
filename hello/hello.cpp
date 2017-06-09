@@ -3,26 +3,6 @@
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 #include <CL/cl.hpp>
 
-std::vector<cl::Device> get_Device_List(const cl_device_type type)
-{
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-    std::vector<cl::Device> device_list;
-    for (auto &platform : platforms) {
-        std::vector<cl::Device> devices;
-        platform.getDevices(type, &devices);
-		if (devices.size() != 0) {
-			return devices;
-		}
-    }
-	throw;
-}
-
-cl::Context get_Context(const cl_device_type type)
-{
-	return cl::Context(get_Device_List(type));
-}
-
 cl::Program fetch_Program(int &argc, char ** &argv)
 {
 	argc--;
@@ -45,7 +25,7 @@ cl::Program fetch_Program(int &argc, char ** &argv)
      
 int main(int argc, char *argv[])
 {
-	cl::Context context = get_Context(CL_DEVICE_TYPE_GPU);
+	cl::Context context(CL_DEVICE_TYPE_GPU);
     std::vector<cl::Device> gpu_list = context.getInfo<CL_CONTEXT_DEVICES>();
     cl::Platform platform = gpu_list[0].getInfo<CL_DEVICE_PLATFORM>();
 
