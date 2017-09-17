@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	cl::Kernel kernel(program, "hello");
 	kernel.setArg(0, buffer);
 
-	queue.enqueueTask(kernel);
+	queue.enqueueNDRangeKernel(kernel, cl::NDRange(0), cl::NDRange(512));
 	queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(string), string);
 
 	puts(string);
