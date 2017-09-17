@@ -29,16 +29,20 @@ int main(int argc, char *argv[])
 	cl::Program program(context, fetch_Program(argc, argv), true);
 	cl::CommandQueue queue(context, gpu_list[0]);
 
-	char string[20] = { 0 };
-	cl::Buffer buffer(context, CL_MEM_WRITE_ONLY, sizeof(string));
+	cl::Kernel kernel(program, "initialize");
 
-	cl::Kernel kernel(program, "hello");
-	kernel.setArg(0, buffer);
+	const size_t shape = 512;
+	const size_t variable_num = 8;
+	std::vector<float> value(shape*variable_num);
 
-	queue.enqueueNDRangeKernel(kernel, cl::NDRange(0), cl::NDRange(512));
-	queue.enqueueReadBuffer(buffer, CL_TRUE, 0, sizeof(string), string);
+	cl::Buffer current_buf(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
 
-	puts(string);
+	kernel.setArg(0, current_buf);
+	kernel.setArg(1, shape);
+
+	queue.enqueueNDRangeKernel(kernel, cl::NDRange(0), cl::NDRange(shape));
+	queue.enqueueReadBuffer(current_buf, true, 0, shape*variable_num * sizeof(float), value.data());
+
 #ifdef _WIN32
 	system("pause");
 #endif
