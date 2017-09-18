@@ -3,6 +3,12 @@
 #define GAMMA   (5.0/3.0)
 #define SQ(x)   (x*x)
 #define SQ3(x,y,z) (SQ(x) + SQ(y) + SQ(z))
+/*
+	rho := mass density
+	p   := momentum density
+	eps := energy density
+	B   := magnetic flux density
+*/
 
 float P_to_eps(
 	  const float P
