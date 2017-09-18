@@ -52,8 +52,9 @@ __kernel void initialize(
 }
 
 __kernel void nextstep(
-	  __global *buf
-	, __global *buf_next
+	  __global float *buf
+	, __global float *buf_next
+	, const size_t shape
 )
 {
 	__global float *rho = buf + shape * 0;
@@ -73,5 +74,7 @@ __kernel void nextstep(
 	__global float *B_y_next = buf_next + shape * 6;
 	__global float *B_z_next = buf_next + shape * 7;
 
+	const int gid = get_global_id(0);
 
+	printf("%d, %f\n", gid, rho[gid]);
 }
