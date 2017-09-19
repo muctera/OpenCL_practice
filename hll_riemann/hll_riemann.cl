@@ -5,6 +5,7 @@
 #define SQ3(x,y,z) (SQ(x) + SQ(y) + SQ(z))
 #define VDOT3(x1,y1,z1,x2,y2,z2) ((x1)*(x2) + (y1)*(y2) + (z1)*(z2))
 #define ROEAVE(sr0,sr1,u0,u1) (((sr0)*(u0)+(sr1)*(u1))/(sr0 + sr1))
+#define DTDX (0.0625)
 /*
 	rho := mass density
 	p   := momentum density
@@ -141,8 +142,6 @@ __kernel void nextstep(
 	const float v_x_hll = p_x_hll / rho_hll;
 
 	const float rho_flux_hll = hll_flux(SL, SR, rho[0], rho[1], 0.0, 0.0);
-	const float p_x_flux[2] = { P + epsB[0] - SQ(B_x[0]) / (4.0*PI)
-							  , P + epsB[0] - SQ(B_x[1]) / (4.0*PI) };
 	const float p_y_flux[2] = { -B_x[0]*B_y[0] / (4.0*PI)
 							  , -B_x[1]*B_y[1] / (4.0*PI) };
 	const float p_z_flux[2] = { -B_x[0]*B_z[0] / (4.0*PI)
@@ -159,4 +158,23 @@ __kernel void nextstep(
 	const float B_x_flux_hll = hll_flux(SL, SR, B_x[0], B_x[1], B_x_flux[0], B_x_flux[1]);
 	const float B_y_flux_hll = hll_flux(SL, SR, B_y[0], B_y[1], B_y_flux[0], B_y_flux[1]);
 	const float B_z_flux_hll = hll_flux(SL, SR, B_z[0], B_z[1], B_z_flux[0], B_z_flux[1]);
+
+	const int up = v_x_hll > 0.0 ? 0 : 1;
+	const float rho_flux_adv = v_x_hll * rho[up];
+	const float p_x_flux_adv = v_x_hll * p_x[up];
+	const float p_y_flux_adv = v_x_hll * p_y[up];
+	const float p_z_flux_adv = v_x_hll * p_z[up];
+	const float eps_flux_adv = v_x_hll * VDOT3(v_x[up], v_y[up], v_z[up], p_x[up], p_y[up], p_z[up]) / 2.0;
+	const float B_x_flux_adv = v_x_hll * B_x[up];
+	const float B_y_flux_adv = v_x_hll * B_y[up];
+	const float B_z_flux_adv = v_x_hll * B_z[up];
+
+	rho_next[0] = rho[0] + DTDX * (rho_flux_hll + rho_flux_adv);
+	p_x_next[0] = p_x[0] + DTDX * (p_x_flux_hll + p_x_flux_adv);
+	p_y_next[0] = p_y[0] + DTDX * (p_y_flux_hll + p_y_flux_adv);
+	p_z_next[0] = p_z[0] + DTDX * (p_z_flux_hll + p_z_flux_adv);
+	eps_next[0] = eps[0] + DTDX * (eps_flux_hll + eps_flux_adv);
+	B_x_next[0] = B_x[0] + DTDX * (B_x_flux_hll + B_x_flux_adv);
+	B_y_next[0] = B_y[0] + DTDX * (B_y_flux_hll + B_y_flux_adv);
+	B_z_next[0] = B_z[0] + DTDX * (B_z_flux_hll + B_z_flux_adv);
 }

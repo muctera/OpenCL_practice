@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     std::vector<cl::Device> gpu_list = context.getInfo<CL_CONTEXT_DEVICES>();
 
 	cl::Program program(context, fetch_Program(argc, argv));
-	program.build(gpu_list, "-cl-std=CL2.0");
+	program.build(gpu_list, "-cl-std=CL2.0 -cl-single-precision-constant");
 	std::cerr << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(gpu_list[0]) << std::endl;
 	cl::CommandQueue queue(context, gpu_list[0]);
 
@@ -57,6 +57,11 @@ int main(int argc, char *argv[])
 	nextstep.setArg(2, shape);
 
 	queue.enqueueNDRangeKernel(nextstep, cl::NDRange(0), cl::NDRange(shape));
+	queue.enqueueReadBuffer(next_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
+
+	for (size_t i = 0; i < shape; i++) {
+		std::cout << i << " " << value.at(i + shape*4) << std::endl;
+	}
 
 #ifdef _WIN32
 	system("pause");
