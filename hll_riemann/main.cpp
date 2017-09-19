@@ -42,34 +42,29 @@ int main(int argc, char *argv[])
 	cl::Buffer flux_buf(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
 
 	cl::Kernel initialize(program, "initialize");
-
 	initialize.setArg(0, value_buf);
 	initialize.setArg(1, shape);
-	queue.enqueueNDRangeKernel(initialize, cl::NDRange(0), cl::NDRange(shape));
 
+	cl::Kernel calc_flux(program, "calc_flux");
+	calc_flux.setArg(0, value_buf);
+	calc_flux.setArg(1, flux_buf);
+	calc_flux.setArg(2, shape);
+
+	cl::Kernel nextstep(program, "nextstep");
+	nextstep.setArg(0, flux_buf);
+	nextstep.setArg(1, value_buf);
+	nextstep.setArg(2, shape);
+
+	queue.enqueueNDRangeKernel(initialize, cl::NDRange(0), cl::NDRange(shape));
 	queue.enqueueReadBuffer(value_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 	for (size_t i = 0; i < shape; i++) {
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
 
-	cl::Kernel calc_flux(program, "calc_flux");
-
-	calc_flux.setArg(0, value_buf);
-	calc_flux.setArg(1, flux_buf);
-	calc_flux.setArg(2, shape);
-	queue.enqueueNDRangeKernel(calc_flux, cl::NDRange(0), cl::NDRange(shape - halo));
-
-	queue.enqueueReadBuffer(flux_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
-	for (size_t i = 0; i < shape; i++) {
-		std::cout << i << " " << value.at(i + shape*4) << std::endl;
+	for (int i = 0; i < 2; i++) {
+		queue.enqueueNDRangeKernel(calc_flux, cl::NDRange(0), cl::NDRange(shape - halo));
+		queue.enqueueNDRangeKernel(nextstep, cl::NDRange(halo), cl::NDRange(shape - halo));
 	}
-
-	cl::Kernel nextstep(program, "nextstep");
-
-	nextstep.setArg(0, flux_buf);
-	nextstep.setArg(1, value_buf);
-	nextstep.setArg(2, shape);
-	queue.enqueueNDRangeKernel(nextstep, cl::NDRange(halo), cl::NDRange(shape - halo));
 
 	queue.enqueueReadBuffer(value_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 	for (size_t i = 0; i < shape; i++) {
