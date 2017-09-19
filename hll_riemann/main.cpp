@@ -33,36 +33,50 @@ int main(int argc, char *argv[])
 	cl::CommandQueue queue(context, gpu_list[0]);
 
 
-	const size_t shape = 512;
+	const size_t edge = 1;
+	const size_t shape = 512 + edge;
 	const size_t variable_num = 8;
 	std::vector<float> value(shape*variable_num);
 
-	cl::Buffer buf(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
-	cl::Buffer next_buf(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
+	cl::Buffer buf0(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
+	cl::Buffer buf1(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
 
 	cl::Kernel initialize(program, "initialize");
-	initialize.setArg(0, buf);
+
+	initialize.setArg(0, buf0);
 	initialize.setArg(1, shape);
-
 	queue.enqueueNDRangeKernel(initialize, cl::NDRange(0), cl::NDRange(shape));
-	queue.enqueueReadBuffer(buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 
+	initialize.setArg(0, buf1);
+	initialize.setArg(1, shape);
+	queue.enqueueNDRangeKernel(initialize, cl::NDRange(0), cl::NDRange(shape));
+
+	queue.enqueueReadBuffer(buf0, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 	for (size_t i = 0; i < shape; i++) {
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
 
 	cl::Kernel nextstep(program, "nextstep");
-	nextstep.setArg(0, buf);
-	nextstep.setArg(1, next_buf);
+
+	nextstep.setArg(0, buf0);
+	nextstep.setArg(1, buf1);
 	nextstep.setArg(2, shape);
+	queue.enqueueNDRangeKernel(nextstep, cl::NDRange(0), cl::NDRange(shape - edge));
 
-	queue.enqueueNDRangeKernel(nextstep, cl::NDRange(0), cl::NDRange(shape));
-	queue.enqueueReadBuffer(next_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
-
+	queue.enqueueReadBuffer(buf1, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 	for (size_t i = 0; i < shape; i++) {
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
 
+	nextstep.setArg(0, buf1);
+	nextstep.setArg(1, buf0);
+	nextstep.setArg(2, shape);
+	queue.enqueueNDRangeKernel(nextstep, cl::NDRange(0), cl::NDRange(shape - edge));
+
+	queue.enqueueReadBuffer(buf0, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
+	for (size_t i = 0; i < shape; i++) {
+		std::cout << i << " " << value.at(i + shape*4) << std::endl;
+	}
 #ifdef _WIN32
 	system("pause");
 #endif
