@@ -89,9 +89,9 @@ __kernel void initialize(
 	eps[gid] = P_to_eps(P, rho[gid], p2, B2);
 }
 
-__kernel void nextstep(
+__kernel void calc_flux(
 	  __global float *buf
-	, __global float *buf_next
+	, __global float *flux_buf
 	, const size_t shape
 )
 {
@@ -104,14 +104,14 @@ __kernel void nextstep(
 	__global float *B_x = buf + shape * 5 + gid;
 	__global float *B_y = buf + shape * 6 + gid;
 	__global float *B_z = buf + shape * 7 + gid;
-	__global float *rho_next = buf_next + shape * 0 + gid;
-	__global float *p_x_next = buf_next + shape * 1 + gid;
-	__global float *p_y_next = buf_next + shape * 2 + gid;
-	__global float *p_z_next = buf_next + shape * 3 + gid;
-	__global float *eps_next = buf_next + shape * 4 + gid;
-	__global float *B_x_next = buf_next + shape * 5 + gid;
-	__global float *B_y_next = buf_next + shape * 6 + gid;
-	__global float *B_z_next = buf_next + shape * 7 + gid;
+	__global float *rho_flux = flux_buf + shape * 0 + gid;
+	__global float *p_x_flux = flux_buf + shape * 1 + gid;
+	__global float *p_y_flux = flux_buf + shape * 2 + gid;
+	__global float *p_z_flux = flux_buf + shape * 3 + gid;
+	__global float *eps_flux = flux_buf + shape * 4 + gid;
+	__global float *B_x_flux = flux_buf + shape * 5 + gid;
+	__global float *B_y_flux = flux_buf + shape * 6 + gid;
+	__global float *B_z_flux = flux_buf + shape * 7 + gid;
 
 	const float eps_B[2] = { SQ3(B_x[0], B_y[0], B_z[0]) / (8.0*PI)
 						   , SQ3(B_x[1], B_y[1], B_z[1]) / (8.0*PI) };
@@ -135,29 +135,29 @@ __kernel void nextstep(
 	const float SR = fmax( Vax, (v_x_ave + sqrt_D) / 2.0);
 	const float SL = fmin(-Vax, (v_x_ave - sqrt_D) / 2.0);
 
-	const float p_x_flux[2] = { P[0] + eps_B[0] - SQ(B_x[0]) / (4.0 * PI)
+	const float p_x_flux_pre[2] = { P[0] + eps_B[0] - SQ(B_x[0]) / (4.0 * PI)
 							  , P[1] + eps_B[1] - SQ(B_x[1]) / (4.0 * PI) };
-	const float p_x_hll = hll_value(SL, SR, p_x[0], p_x[1], p_x_flux[0], p_x_flux[1]);
+	const float p_x_hll = hll_value(SL, SR, p_x[0], p_x[1], p_x_flux_pre[0], p_x_flux_pre[1]);
 	const float rho_hll = hll_value(SL, SR, rho[0], rho[1], 0, 0);
 	const float v_x_hll = p_x_hll / rho_hll;
 
 	const float rho_flux_hll = hll_flux(SL, SR, rho[0], rho[1], 0.0, 0.0);
-	const float p_y_flux[2] = { -B_x[0]*B_y[0] / (4.0*PI)
+	const float p_y_flux_pre[2] = { -B_x[0]*B_y[0] / (4.0*PI)
 							  , -B_x[1]*B_y[1] / (4.0*PI) };
-	const float p_z_flux[2] = { -B_x[0]*B_z[0] / (4.0*PI)
+	const float p_z_flux_pre[2] = { -B_x[0]*B_z[0] / (4.0*PI)
 							  , -B_x[1]*B_z[1] / (4.0*PI) };
-	const float p_x_flux_hll = hll_flux(SL, SR, p_x[0], p_x[1], p_x_flux[0], p_x_flux[1]);
-	const float p_y_flux_hll = hll_flux(SL, SR, p_y[0], p_y[1], p_y_flux[0], p_y_flux[1]);
-	const float p_z_flux_hll = hll_flux(SL, SR, p_z[0], p_z[1], p_z_flux[0], p_z_flux[1]);
-	const float eps_flux[2] = { H[0] * v_x[0] - B_x[0] * (VDOT3(v_x[0], v_y[0], v_z[0], B_x[0], B_y[0], B_z[0]) / (4.0*PI))
+	const float p_x_flux_hll = hll_flux(SL, SR, p_x[0], p_x[1], p_x_flux_pre[0], p_x_flux_pre[1]);
+	const float p_y_flux_hll = hll_flux(SL, SR, p_y[0], p_y[1], p_y_flux_pre[0], p_y_flux_pre[1]);
+	const float p_z_flux_hll = hll_flux(SL, SR, p_z[0], p_z[1], p_z_flux_pre[0], p_z_flux_pre[1]);
+	const float eps_flux_pre[2] = { H[0] * v_x[0] - B_x[0] * (VDOT3(v_x[0], v_y[0], v_z[0], B_x[0], B_y[0], B_z[0]) / (4.0*PI))
 							  , H[1] * v_x[1] - B_x[1] * (VDOT3(v_x[1], v_y[1], v_z[1], B_x[1], B_y[1], B_z[1]) / (4.0*PI)) };
-	const float eps_flux_hll = hll_flux(SL, SR, eps[0], eps[1], eps_flux[0], eps_flux[1]);
-	const float B_x_flux[2] = { 0.0, 0.0 };
-	const float B_y_flux[2] = { -v_y[0] * B_x[0], -v_y[1] * B_x[1] };
-	const float B_z_flux[2] = { -v_z[0] * B_x[0], -v_y[1] * B_x[1] };
-	const float B_x_flux_hll = hll_flux(SL, SR, B_x[0], B_x[1], B_x_flux[0], B_x_flux[1]);
-	const float B_y_flux_hll = hll_flux(SL, SR, B_y[0], B_y[1], B_y_flux[0], B_y_flux[1]);
-	const float B_z_flux_hll = hll_flux(SL, SR, B_z[0], B_z[1], B_z_flux[0], B_z_flux[1]);
+	const float eps_flux_hll = hll_flux(SL, SR, eps[0], eps[1], eps_flux_pre[0], eps_flux_pre[1]);
+	const float B_x_flux_pre[2] = { 0.0, 0.0 };
+	const float B_y_flux_pre[2] = { -v_y[0] * B_x[0], -v_y[1] * B_x[1] };
+	const float B_z_flux_pre[2] = { -v_z[0] * B_x[0], -v_z[1] * B_x[1] };
+	const float B_x_flux_hll = hll_flux(SL, SR, B_x[0], B_x[1], B_x_flux_pre[0], B_x_flux_pre[1]);
+	const float B_y_flux_hll = hll_flux(SL, SR, B_y[0], B_y[1], B_y_flux_pre[0], B_y_flux_pre[1]);
+	const float B_z_flux_hll = hll_flux(SL, SR, B_z[0], B_z[1], B_z_flux_pre[0], B_z_flux_pre[1]);
 
 	const int up = v_x_hll > 0.0 ? 0 : 1;
 	const float rho_flux_adv = v_x_hll * rho[up];
@@ -169,12 +169,46 @@ __kernel void nextstep(
 	const float B_y_flux_adv = v_x_hll * B_y[up];
 	const float B_z_flux_adv = v_x_hll * B_z[up];
 
-	rho_next[0] = rho[0] + DTDX * (rho_flux_hll + rho_flux_adv);
-	p_x_next[0] = p_x[0] + DTDX * (p_x_flux_hll + p_x_flux_adv);
-	p_y_next[0] = p_y[0] + DTDX * (p_y_flux_hll + p_y_flux_adv);
-	p_z_next[0] = p_z[0] + DTDX * (p_z_flux_hll + p_z_flux_adv);
-	eps_next[0] = eps[0] + DTDX * (eps_flux_hll + eps_flux_adv);
-	B_x_next[0] = B_x[0] + DTDX * (B_x_flux_hll + B_x_flux_adv);
-	B_y_next[0] = B_y[0] + DTDX * (B_y_flux_hll + B_y_flux_adv);
-	B_z_next[0] = B_z[0] + DTDX * (B_z_flux_hll + B_z_flux_adv);
+	rho_flux[0] = rho_flux_hll + rho_flux_adv;
+	p_x_flux[0] = p_x_flux_hll + p_x_flux_adv;
+	p_y_flux[0] = p_y_flux_hll + p_y_flux_adv;
+	p_z_flux[0] = p_z_flux_hll + p_z_flux_adv;
+	eps_flux[0] = eps_flux_hll + eps_flux_adv;
+	B_x_flux[0] = B_x_flux_hll + B_x_flux_adv;
+	B_y_flux[0] = B_y_flux_hll + B_y_flux_adv;
+	B_z_flux[0] = B_z_flux_hll + B_z_flux_adv;
+}
+
+__kernel void nextstep(
+	  __global float *flux_buf
+	, __global float *buf
+	, size_t shape
+)
+{
+	const int gid = get_global_id(0);
+	__global float *rho = buf + shape * 0 + gid;
+	__global float *p_x = buf + shape * 1 + gid;
+	__global float *p_y = buf + shape * 2 + gid;
+	__global float *p_z = buf + shape * 3 + gid;
+	__global float *eps = buf + shape * 4 + gid;
+	__global float *B_x = buf + shape * 5 + gid;
+	__global float *B_y = buf + shape * 6 + gid;
+	__global float *B_z = buf + shape * 7 + gid;
+	__global float *rho_flux = flux_buf + shape * 0 + gid;
+	__global float *p_x_flux = flux_buf + shape * 1 + gid;
+	__global float *p_y_flux = flux_buf + shape * 2 + gid;
+	__global float *p_z_flux = flux_buf + shape * 3 + gid;
+	__global float *eps_flux = flux_buf + shape * 4 + gid;
+	__global float *B_x_flux = flux_buf + shape * 5 + gid;
+	__global float *B_y_flux = flux_buf + shape * 6 + gid;
+	__global float *B_z_flux = flux_buf + shape * 7 + gid;
+
+	rho[0] += DTDX * (rho_flux[0] - rho_flux[-1]);
+	p_x[0] += DTDX * (p_x_flux[0] - p_x_flux[-1]);
+	p_y[0] += DTDX * (p_y_flux[0] - p_y_flux[-1]);
+	p_y[0] += DTDX * (p_z_flux[0] - p_z_flux[-1]);
+	eps[0] += DTDX * (eps_flux[0] - eps_flux[-1]);
+	B_x[0] += DTDX * (B_x_flux[0] - B_x_flux[-1]);
+	B_y[0] += DTDX * (B_y_flux[0] - B_y_flux[-1]);
+	B_z[0] += DTDX * (B_z_flux[0] - B_z_flux[-1]);
 }
