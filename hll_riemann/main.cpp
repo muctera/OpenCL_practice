@@ -61,9 +61,9 @@ int main(int argc, char *argv[])
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
 
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 10; i++) {
 		queue.enqueueNDRangeKernel(calc_flux, cl::NDRange(0), cl::NDRange(shape - halo));
-		queue.enqueueNDRangeKernel(nextstep, cl::NDRange(halo), cl::NDRange(shape - halo));
+		queue.enqueueNDRangeKernel(nextstep, cl::NDRange(halo), cl::NDRange(shape - 2*halo));
 	}
 
 	queue.enqueueReadBuffer(value_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());

@@ -203,12 +203,12 @@ __kernel void nextstep(
 	__global float *B_y_flux = flux_buf + shape * 6 + gid;
 	__global float *B_z_flux = flux_buf + shape * 7 + gid;
 
-	rho[0] += DTDX * (rho_flux[0] - rho_flux[-1]);
-	p_x[0] += DTDX * (p_x_flux[0] - p_x_flux[-1]);
-	p_y[0] += DTDX * (p_y_flux[0] - p_y_flux[-1]);
-	p_y[0] += DTDX * (p_z_flux[0] - p_z_flux[-1]);
-	eps[0] += DTDX * (eps_flux[0] - eps_flux[-1]);
-	B_x[0] += DTDX * (B_x_flux[0] - B_x_flux[-1]);
-	B_y[0] += DTDX * (B_y_flux[0] - B_y_flux[-1]);
-	B_z[0] += DTDX * (B_z_flux[0] - B_z_flux[-1]);
+	rho[0] -= DTDX * (rho_flux[0] - rho_flux[-1]);
+	p_x[0] -= DTDX * (p_x_flux[0] - p_x_flux[-1]);
+	p_y[0] -= DTDX * (p_y_flux[0] - p_y_flux[-1]);
+	p_y[0] -= DTDX * (p_z_flux[0] - p_z_flux[-1]);
+	eps[0] -= DTDX * (eps_flux[0] - eps_flux[-1]);
+	B_x[0] -= DTDX * (B_x_flux[0] - B_x_flux[-1]);
+	B_y[0] -= DTDX * (B_y_flux[0] - B_y_flux[-1]);
+	B_z[0] -= DTDX * (B_z_flux[0] - B_z_flux[-1]);
 }
