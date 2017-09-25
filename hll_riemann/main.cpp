@@ -1,8 +1,9 @@
+#include<H5Cpp.h>
 #include <iostream>
 #include <fstream>
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 #include <CL/cl.hpp>
-#include<H5Cpp.h>
+#include<boost/format.hpp>
 
 std::string fetch_Program(int &argc, char ** &argv)
 {
@@ -22,6 +23,19 @@ std::string fetch_Program(int &argc, char ** &argv)
 
 	return filestring;
 }
+
+std::string outputfilename(int &argc, char ** &argv)
+{
+	argc--;
+	argv++;
+	if (argc == 0) {
+		throw;
+	}
+
+	std::cerr << argv[0] << std::endl;
+
+	return (boost::format("%s\\outfile.hdf5") % argv[0]).str();
+}
      
 int main(int argc, char *argv[])
 {
@@ -36,7 +50,8 @@ int main(int argc, char *argv[])
 
 	const size_t halo = 1;
 	const size_t shape = 512;
-	const size_t variable_num = 8;
+	const std::vector<std::string> valname{ "rho", "p_x", "p_y", "p_z", "eps", "B_x", "B_y", "B_z" };
+	const size_t variable_num = valname.size();
 	std::vector<float> value(shape*variable_num);
 
 	cl::Buffer value_buf(context, CL_MEM_READ_WRITE, shape*variable_num * sizeof(float));
@@ -57,10 +72,24 @@ int main(int argc, char *argv[])
 	nextstep.setArg(2, shape);
 
 	queue.enqueueNDRangeKernel(initialize, cl::NDRange(0), cl::NDRange(shape));
+
 	queue.enqueueReadBuffer(value_buf, CL_TRUE, 0, shape*variable_num * sizeof(float), value.data());
 	for (size_t i = 0; i < shape; i++) {
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
+	
+	int group_id = 0;
+	H5::H5File outputfile(outputfilename(argc, argv), H5F_ACC_TRUNC);
+	H5::Group group_init = outputfile.createGroup((boost::format("%d") % group_id++).str());
+	std::vector<H5::DataSet> dataset(variable_num);
+	H5::DataSpace space(1, &shape);
+	for (size_t i = 0; i < variable_num; i++) {
+		dataset[i] = group_init.createDataSet(valname[i], H5::PredType::NATIVE_FLOAT, space);
+		dataset[i].write(value.data() + shape * i, H5::PredType::NATIVE_FLOAT);
+		dataset[i].close();
+	}
+	group_init.close();
+
 
 	for (int i = 0; i < 10; i++) {
 		queue.enqueueNDRangeKernel(calc_flux, cl::NDRange(0), cl::NDRange(shape - halo));
@@ -71,6 +100,17 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; i < shape; i++) {
 		std::cout << i << " " << value.at(i + shape*4) << std::endl;
 	}
+
+	H5::Group group = outputfile.createGroup((boost::format("%d") % group_id++).str());
+	for (size_t i = 0; i < variable_num; i++) {
+		dataset[i] = group.createDataSet(valname[i], H5::PredType::NATIVE_FLOAT, space);
+		dataset[i].write(value.data() + shape * i, H5::PredType::NATIVE_FLOAT);
+		dataset[i].close();
+	}
+	group.close();
+	outputfile.close();
+	space.close();
+
 
 #ifdef _WIN32
 	system("pause");
